@@ -21,6 +21,40 @@ if "page" not in st.session_state:
     st.session_state.random_partners = []
     st.session_state.language = "en"  # language toggle default
 
+# Custom styling
+st.markdown("""
+    <style>
+        html, body, [class*="css"] {
+            background-color: #F8F1E1 !important;
+            font-family: "Source Sans Pro", sans-serif !important;
+        }
+        .stApp { background-color: #F8F1E1 !important; }
+        .big-title {
+            font-size: 36px;
+            font-weight: 700;
+            text-align: center;
+            margin-top: 30px;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        .stButton > button {
+            font-size: 18px !important;
+            font-weight: bold !important;
+            color: black !important;
+            background-color: #89CFF0 !important;
+            border: none !important;
+            border-radius: 8px !important;
+            padding: 10px 20px !important;
+            margin: 10px !important;
+            transition: background-color 0.3s ease !important;
+        }
+        .stButton > button:hover {
+            background-color: #90EE90 !important;
+            color: black !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 # Translation dictionary for UI and options
 translations = {
     "Pick a character": {"en": "Pick a character", "es": "Elige un personaje"},
@@ -39,8 +73,15 @@ translations = {
     "Crafting your story...": {"en": "Crafting your story...", "es": "Creando tu historia..."},
     "Story Time!": {"en": "Story Time!", "es": "¡Hora del cuento!"},
     "Start Over": {"en": "Start Over", "es": "Empezar de nuevo"},
-    "✨ Illustration": {"en": "✨ Illustration", "es": "✨ Ilustración"}
+    "✨ Illustration": {"en": "✨ Illustration", "es": "✨ Ilustración"},
+    "Switch Language": {"en": "English", "es": "Español"}
 }
+
+# Sidebar radio toggle for language
+with st.sidebar:
+    lang_choice = st.radio("🌐 Language / Idioma", options=["en", "es"], index=0 if st.session_state.language == "en" else 1, format_func=lambda x: "🇬🇧 English" if x == "en" else "🇪🇸 Español")
+    st.session_state.language = lang_choice
+
 
 actions_translated = [
     ("Climb a giant sunflower", "Escalar un girasol gigante"),
@@ -131,11 +172,6 @@ def translate_story(text):
     except Exception:
         return text  # fallback if translation fails
 
-
-# Sidebar language toggle
-with st.sidebar:
-    if st.button("🇪🇸 Español" if st.session_state.language == "en" else "🇬🇧 English"):
-        st.session_state.language = "es" if st.session_state.language == "en" else "en"
 
 # PAGE 0 — Pick a character
 if st.session_state.page == 0:
@@ -248,7 +284,12 @@ elif st.session_state.page == 4:
             st.session_state.random_locations = []
             st.session_state.random_partners = []
 
-            image_prompt = f"Children's book illustration in watercolor style, DO NOT SHOW ANY TEXT IN THE IMAGE, showing the story: {full_story[:500]}"
+            image_prompt = (
+                f"Children's book illustration in watercolor style, "
+                f"showing a scene from this story: {full_story[:500]}. "
+                "The image should visually represent the story, but must not contain any text, writing, letters, or captions."
+            )
+
             image_response = client.images.generate(
                 model="dall-e-3",
                 prompt=image_prompt,
