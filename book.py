@@ -118,9 +118,16 @@ translations = {
 }
 
 # Sidebar radio toggle for language
-with st.sidebar:
-    lang_choice = st.radio("🌐 Language / Idioma", options=["en", "es"], index=0 if st.session_state.language == "en" else 1, format_func=lambda x: "🇬🇧 English" if x == "en" else "🇪🇸 Español")
-    st.session_state.language = lang_choice
+# Display a language switcher in the top-right corner of the page
+language_col1, language_col2, language_col3 = st.columns([6, 1, 1])
+with language_col2:
+    if st.button("🇬🇧"):
+        st.session_state.language = "en"
+        st.rerun()
+with language_col3:
+    if st.button("🇪🇸"):
+        st.session_state.language = "es"
+        st.rerun()
 
 
 actions_translated = [
