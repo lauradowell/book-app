@@ -2,11 +2,48 @@ from openai import OpenAI
 from PIL import Image
 import streamlit as st
 import random
+import base64
+import tempfile
 
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 # Set page config FIRST
 st.set_page_config(page_title="Choose Your Story", layout="centered")
+
+import base64
+import tempfile
+import langdetect 
+
+
+def generate_tts_audio(text):
+    try:
+        tts_response = client.audio.speech.create(
+            model="tts-1",
+            voice="nova",
+            input=text,
+        )
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp_file:
+            tts_response.stream_to_file(tmp_file.name)
+            audio_path = tmp_file.name
+
+        with open(audio_path, "rb") as f:
+            return f.read()
+    except Exception as e:
+        st.warning(f"TTS generation failed: {e}")
+        return None
+
+
+def add_speaker_button(text_to_read):
+    audio_bytes = generate_tts_audio(text_to_read)
+    if audio_bytes:
+        label = "🔊 Narrate this section:" if st.session_state.language == "en" else "🔊 Narrar esta sección:"
+        with st.container():
+            st.markdown("---")
+            st.markdown(f"**{label}**")
+            st.audio(audio_bytes, format="audio/mp3")
+
+
+
 
 # Initialize page state
 if "page" not in st.session_state:
@@ -173,18 +210,19 @@ def translate_story(text):
         return text  # fallback if translation fails
 
 
-# PAGE 0 — Pick a character
 if st.session_state.page == 0:
-    st.markdown(f"<div class='big-title'>👧 {t('Pick a character')}</div>", unsafe_allow_html=True)
-    st.image(Image.open("images/characters.png"), use_container_width=True)
+    instruction_text = t("Pick a character")
+    st.markdown(f"<div class='big-title'>👧 {instruction_text}</div>", unsafe_allow_html=True)
+
 
     characters = [
-        ("Peter", "Pedro"),
-        ("Red Riding Hood", "Caperucita Roja"),
+        ("A boy named Peter", "Un niño llamado Pedro"),
+        ("A girl named Alice", "Una niña llamada Alicia"),
         ("Mr. Rabbit", "Señor Conejo"),
-        ("Rapunzel", "Rapunzel")
+        ("A doggy", "Un perrito")
     ]
     option_buttons(characters, "char", "character")
+
 
     custom = st.text_input(t("Or describe your own character..."))
     if st.button(t("Use custom character")):
@@ -192,14 +230,25 @@ if st.session_state.page == 0:
             st.session_state.character = custom.strip()
             st.session_state.page += 1
 
+    option_labels = [c[1] if st.session_state.language == "es" else c[0] for c in characters]
+    combined_text = t("Pick a character") + ". " + ", ".join(option_labels)
+    add_speaker_button(combined_text)
+
+ 
+
+
+
+
 # PAGE 1 — What will they do?
 elif st.session_state.page == 1:
-    st.markdown(f"<div class='big-title'>🧪 {t('What will they do?')}</div>", unsafe_allow_html=True)
+    instruction_text = t("What will they do?")
+    st.markdown(f"<div class='big-title'>🧪 {instruction_text}</div>", unsafe_allow_html=True)
 
     if not st.session_state.random_actions:
         st.session_state.random_actions = random.sample(actions_translated, 3)
 
     option_buttons(st.session_state.random_actions, "act", "action")
+
 
     custom = st.text_input(t("Or write what they'll do..."))
     if st.button(t("Use custom action")):
@@ -207,14 +256,21 @@ elif st.session_state.page == 1:
             st.session_state.action = custom.strip()
             st.session_state.page += 1
 
+    option_labels = [a[1] if st.session_state.language == "es" else a[0] for a in st.session_state.random_actions]
+    combined_text = t("What will they do?") + ". " + ", ".join(option_labels)
+    add_speaker_button(combined_text)
+
+
 # PAGE 2 — Where will they be?
 elif st.session_state.page == 2:
-    st.markdown(f"<div class='big-title'>🌍 {t('Where will they be?')}</div>", unsafe_allow_html=True)
+    instruction_text = t("Where will they be?")
+    st.markdown(f"<div class='big-title'>🌍 {instruction_text}</div>", unsafe_allow_html=True)
 
     if not st.session_state.random_locations:
         st.session_state.random_locations = random.sample(locations_translated, 3)
 
     option_buttons(st.session_state.random_locations, "loc", "location")
+
 
     custom = st.text_input(t("Or describe the location:"))
     if st.button(t("Use custom location")):
@@ -222,11 +278,17 @@ elif st.session_state.page == 2:
             st.session_state.location = custom.strip()
             st.session_state.page += 1
 
+    option_labels = [l[1] if st.session_state.language == "es" else l[0] for l in st.session_state.random_locations]
+    combined_text = t("Where will they be?") + ". " + ", ".join(option_labels)
+    add_speaker_button(combined_text)
+
 
 
 # PAGE 3 — Who will they be with?
 elif st.session_state.page == 3:
-    st.markdown(f"<div class='big-title'>🧑‍🚀 {t('Who will they be with?')}</div>", unsafe_allow_html=True)
+    instruction_text = t("Who will they be with?")
+    st.markdown(f"<div class='big-title'>🧑‍🚀 {instruction_text}</div>", unsafe_allow_html=True)
+
 
     # Generate random companions only once
     if not st.session_state.random_partners:
@@ -234,6 +296,7 @@ elif st.session_state.page == 3:
 
     # Display translated options
     options = [(comp["en"], comp["es"]) for comp in st.session_state.random_partners]
+
 
     option_buttons(options, "comp", "partner")
 
@@ -244,11 +307,24 @@ elif st.session_state.page == 3:
             st.session_state.partner = custom.strip()
             st.session_state.page += 1
 
+    option_labels = [c["es"] if st.session_state.language == "es" else c["en"] for c in st.session_state.random_partners]
+    combined_text = t("Who will they be with?") + ". " + ", ".join(option_labels)
+    add_speaker_button(combined_text)
+
+
+
+
 
 # PAGE 4 — Generate story
 elif st.session_state.page == 4:
+    instruction_text = t("Generating story...") + " " + t("Crafting your story...")
+    add_speaker_button(t("Generating story...") + " " + t("Crafting your story..."))
+
+
+
     st.title(t("Generating story..."))
     with st.spinner(t("Crafting your story...")):
+    
         # Get companion description from the new structure
         partner_desc = next(
             (c["description"] for c in companions if c["en"] == st.session_state.partner),
@@ -264,7 +340,7 @@ elif st.session_state.page == 4:
         4. 🎉 Show how they solve the problem using creativity, kindness, or teamwork.
         5. 💡 End with a heartwarming and simple lesson that children can easily understand.
 
-        Please use gender-neutral language (like "they/them"), and keep the tone playful, magical, and suited for children aged 5–9.
+        Please keep the tone playful, magical, and suited for children aged 5–9.
         """
 
         try:
@@ -283,11 +359,14 @@ elif st.session_state.page == 4:
             st.session_state.random_actions = []
             st.session_state.random_locations = []
             st.session_state.random_partners = []
-
+        
             image_prompt = (
-                f"Children's book illustration in watercolor style, "
-                f"showing a scene from this story: {full_story[:500]}. "
-                "The image should visually represent the story, but must not contain any text, writing, letters, or captions."
+                f"Watercolor-style children's book illustration. "
+                f"Depict a key moment from the following story: {full_story[:500]}. "
+                f"The illustration should be colorful, whimsical, and engaging, "
+                f"capturing the emotion and setting of the story scene described. "
+                f"Include expressive characters, relevant background elements, "
+                f"and a sense of wonder suitable for a children's audience."
             )
 
             image_response = client.images.generate(
@@ -309,6 +388,9 @@ elif st.session_state.page == 4:
 # PAGE 5 — Show story
 elif st.session_state.page == 5:
     st.title(t("Story Time!"))
+    story_text = translate_story(st.session_state.story)
+    add_speaker_button(story_text)
+
 
     if st.session_state.get("story_image_url"):
         st.image(st.session_state.story_image_url, caption=t("✨ Illustration"), use_container_width=True)
