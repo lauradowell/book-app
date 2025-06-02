@@ -86,6 +86,10 @@ st.markdown("""
             padding: 10px 20px !important;
             margin: 10px !important;
             transition: background-color 0.3s ease !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            min-width: 120px !important;
         }
         .stButton > button:hover {
             background-color: #90EE90 !important;
@@ -119,7 +123,7 @@ translations = {
 
 # Sidebar radio toggle for language
 # Display a language switcher in the top-right corner of the page
-language_col1, language_col2, language_col3 = st.columns([6, 1, 1])
+language_col1, language_col2, spacer, language_col3 = st.columns([6, 1, 0.2, 1])
 with language_col2:
     if st.button("🇬🇧"):
         st.session_state.language = "en"
@@ -277,17 +281,21 @@ if st.session_state.page == -2:
 
 # PAGE -1 — Choose Age Group
 elif st.session_state.page == -1:
-    st.markdown(f"<div class='big-title'>👶 {'How old are you?' if st.session_state.language == 'en' else '¿Cuántos años tienes?'}</div>", unsafe_allow_html=True)
+    question = "👶 How old are you?" if st.session_state.language == "en" else "¿Cuántos años tienes?"
+    st.markdown(f"<div class='big-title'> {question}</div>", unsafe_allow_html=True)
 
     age_options = ["0-3", "3-10", "10-16"]
 
-    cols = st.columns(3)
+    cols = st.columns([1, 1, 1, 1, 1])
     for i, age_range in enumerate(age_options):
-        with cols[i]:
+        with cols[i + 1]:
             if st.button(age_range):
                 st.session_state.story_age_group = age_range
-                st.session_state.page = 0  # next step: tone
+                st.session_state.page = 0
                 st.rerun()
+
+    add_speaker_button(question)
+
 
 
 
