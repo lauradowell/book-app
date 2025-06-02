@@ -47,7 +47,8 @@ def add_speaker_button(text_to_read):
 
 # Initialize page state
 if "page" not in st.session_state:
-    st.session_state.page = 0
+    st.session_state.page = -2
+    st.session_state.story_tone = ""
     st.session_state.character = ""
     st.session_state.action = ""
     st.session_state.location = ""
@@ -57,6 +58,7 @@ if "page" not in st.session_state:
     st.session_state.random_locations = []
     st.session_state.random_partners = []
     st.session_state.language = "en"  # language toggle default
+
 
 # Custom styling
 st.markdown("""
@@ -94,6 +96,7 @@ st.markdown("""
 
 # Translation dictionary for UI and options
 translations = {
+    "Choose Your Story": { "en": "Choose Your Story", "es": "Crea Tu Historia"},
     "Pick a character": {"en": "Pick a character", "es": "Elige un personaje"},
     "What will they do?": {"en": "What will they do?", "es": "¿Qué harán?"},
     "Where will they be?": {"en": "Where will they be?", "es": "¿Dónde estarán?"},
@@ -179,6 +182,33 @@ companions = [
     {"en": "A jellyfish", "es": "Una medusa", "description": "a glowing jellyfish with rainbow tentacles and glasses"}
 ]
 
+tone_styles = {
+    "Magical": {
+        "en": "Use wonder-filled language, enchanting settings, and whimsical details that spark imagination.",
+        "es": "Usa un lenguaje lleno de maravilla, escenarios encantadores y detalles mágicos que estimulen la imaginación."
+    },
+    "Mysterious": {
+        "en": "Add suspense, curious clues, and a slightly eerie atmosphere while keeping it child-friendly.",
+        "es": "Agrega suspenso, pistas curiosas y una atmósfera misteriosa, pero siempre apta para niños."
+    },
+    "Action-packed": {
+        "en": "Keep the pace fast with exciting events, bold actions, and a sense of adventure and bravery.",
+        "es": "Mantén un ritmo rápido con eventos emocionantes, acciones valientes y un sentido de aventura."
+    },
+    "Spooky": {
+        "en": "Use eerie yet playful imagery, shadows, and tension that feel spooky but safe for kids.",
+        "es": "Utiliza imágenes espeluznantes pero divertidas, sombras y tensión que den miedo pero sean seguras para niños."
+    },
+    "Funny": {
+        "en": "Incorporate silly situations, clever jokes, and playful character interactions to make readers giggle.",
+        "es": "Incluye situaciones tontas, bromas ingeniosas e interacciones divertidas para hacer reír a los lectores."
+    }
+}
+
+
+if "story_age_group" not in st.session_state:
+    st.session_state.story_age_group = "3-10"
+
 
 def t(label):
     lang = st.session_state.get("language", "en")
@@ -209,8 +239,83 @@ def translate_story(text):
     except Exception:
         return text  # fallback if translation fails
 
+# PAGE -1 — Welcome / Instructions
+if st.session_state.page == -2:
+    st.markdown(f"<div class='big-title'>📚 {t('Choose Your Story')}</div>", unsafe_allow_html=True)
 
+
+    if st.session_state.language == "es":
+        intro_text = """
+        ¡Bienvenido a esta aventura interactiva! Aquí puedes crear tu propia historia mágica.  
+        Puedes escoger entre las opciones o introducir tu propia idea. ¡Deja que tu imaginación fluya!
+        """
+        followup_text = "¡Nosotros crearemos una historia solo para ti!"
+        button_label = "¡Empezar!"
+    else:
+        intro_text = """
+        Welcome to this interactive adventure! Here, you can create your very own magical story.  
+        You can choose from the options or write your own. Let your imagination run wild!
+        """
+        followup_text = "We'll turn it into a story just for you!"
+        button_label = "Start!"
+
+    combined_text = intro_text + "\n\n" + followup_text
+    st.markdown(combined_text)
+    add_speaker_button(combined_text)
+
+
+    if st.button(button_label):
+        st.session_state.page = -1
+        st.rerun()
+
+# PAGE -1 — Choose Age Group
+elif st.session_state.page == -1:
+    st.markdown(f"<div class='big-title'>👶 {'How old are you?' if st.session_state.language == 'en' else '¿Cuántos años tienes?'}</div>", unsafe_allow_html=True)
+
+    age_options = ["0-3", "3-10", "10-16"]
+
+    cols = st.columns(3)
+    for i, age_range in enumerate(age_options):
+        with cols[i]:
+            if st.button(age_range):
+                st.session_state.story_age_group = age_range
+                st.session_state.page = 0  # next step: tone
+                st.rerun()
+
+
+
+
+# PAGE 0 — Choose Story Tone (with 5 buttons per row)
 if st.session_state.page == 0:
+    st.markdown("<div class='big-title'>🎭 " + ("Elige el tono de tu historia" if st.session_state.language == "es" else "Choose the Tone of Your Story") + "</div>", unsafe_allow_html=True)
+
+    tones = [
+        ("Magical", "Mágico"),
+        ("Mysterious", "Misterioso"),
+        ("Action-packed", "De Acción"),
+        ("Spooky", "De miedo"),
+        ("Funny", "Gracioso"),
+     
+    ]
+
+    lang = st.session_state.language
+
+    # Split tones into 2 rows of 5
+    rows = [tones[i:i+5] for i in range(0, len(tones), 5)]
+    for row in rows:
+        cols = st.columns(5)
+        for idx, (tone_en, tone_es) in enumerate(row):
+            label = tone_es if lang == "es" else tone_en
+            with cols[idx]:
+                if st.button(label, key=f"tone_{tone_en}"):
+                    st.session_state.story_tone = tone_en
+                    st.session_state.page = 1
+                    st.rerun()
+
+
+
+
+if st.session_state.page == 1:
     instruction_text = t("Pick a character")
     st.markdown(f"<div class='big-title'>👧 {instruction_text}</div>", unsafe_allow_html=True)
 
@@ -236,11 +341,8 @@ if st.session_state.page == 0:
 
  
 
-
-
-
-# PAGE 1 — What will they do?
-elif st.session_state.page == 1:
+# PAGE 2 — What will they do?
+elif st.session_state.page == 2:
     instruction_text = t("What will they do?")
     st.markdown(f"<div class='big-title'>🧪 {instruction_text}</div>", unsafe_allow_html=True)
 
@@ -261,8 +363,8 @@ elif st.session_state.page == 1:
     add_speaker_button(combined_text)
 
 
-# PAGE 2 — Where will they be?
-elif st.session_state.page == 2:
+# PAGE 3 — Where will they be?
+elif st.session_state.page == 3:
     instruction_text = t("Where will they be?")
     st.markdown(f"<div class='big-title'>🌍 {instruction_text}</div>", unsafe_allow_html=True)
 
@@ -284,8 +386,8 @@ elif st.session_state.page == 2:
 
 
 
-# PAGE 3 — Who will they be with?
-elif st.session_state.page == 3:
+# PAGE 4 — Who will they be with?
+elif st.session_state.page == 4:
     instruction_text = t("Who will they be with?")
     st.markdown(f"<div class='big-title'>🧑‍🚀 {instruction_text}</div>", unsafe_allow_html=True)
 
@@ -315,11 +417,9 @@ elif st.session_state.page == 3:
 
 
 
-# PAGE 4 — Generate story
-elif st.session_state.page == 4:
+# PAGE  5— Generate story
+elif st.session_state.page == 5:
     instruction_text = t("Generating story...") + " " + t("Crafting your story...")
-    add_speaker_button(t("Generating story...") + " " + t("Crafting your story..."))
-
 
 
     st.title(t("Generating story..."))
@@ -330,9 +430,11 @@ elif st.session_state.page == 4:
             (c["description"] for c in companions if c["en"] == st.session_state.partner),
             st.session_state.partner
         )
+        tone_style = tone_styles.get(st.session_state.story_tone, {}).get(st.session_state.language, "")
 
         prompt = f"""
-        Write a short and imaginative children's story (under 300 words) with this structure:
+        Write a short {st.session_state.story_tone.lower()} children's story (under 300 words), tailored for children aged {st.session_state.story_age_group}.
+        Use this tone: {tone_style}
 
         1. ✨ Begin by introducing a character named {st.session_state.character}.
         2. 🧱 They go on an adventure to {st.session_state.action}, in {st.session_state.location}, with their companion {partner_desc}.
@@ -340,7 +442,7 @@ elif st.session_state.page == 4:
         4. 🎉 Show how they solve the problem using creativity, kindness, or teamwork.
         5. 💡 End with a heartwarming and simple lesson that children can easily understand.
 
-        Please keep the tone playful, magical, and suited for children aged 5–9.
+       
         """
 
         try:
@@ -378,7 +480,7 @@ elif st.session_state.page == 4:
             )
             st.session_state.story_image_url = image_response.data[0].url
 
-            st.session_state.page = 5
+            st.session_state.page = 6
             st.rerun()
 
         except Exception as e:
@@ -386,7 +488,7 @@ elif st.session_state.page == 4:
 
 
 # PAGE 5 — Show story
-elif st.session_state.page == 5:
+elif st.session_state.page == 6:
     st.title(t("Story Time!"))
     story_text = translate_story(st.session_state.story)
     add_speaker_button(story_text)
