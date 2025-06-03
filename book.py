@@ -95,6 +95,11 @@ st.markdown("""
             background-color: #90EE90 !important;
             color: black !important;
         }
+         .stButton > button:focus, 
+        .stButton > button:active {
+            outline: none !important;
+            box-shadow: none !important;
+            opacity: 1 !important;
     </style>
 """, unsafe_allow_html=True)
 
@@ -123,7 +128,8 @@ translations = {
 
 # Sidebar radio toggle for language
 # Display a language switcher in the top-right corner of the page
-language_col1, language_col2, spacer, language_col3 = st.columns([6, 1, 0.2, 1])
+language_col1, language_col2, spacer, language_col3 = st.columns([6, 1, 1, 1])
+
 with language_col2:
     if st.button("🇬🇧"):
         st.session_state.language = "en"
@@ -256,17 +262,18 @@ if st.session_state.page == -2:
 
 
     if st.session_state.language == "es":
-        intro_text = """
-        ¡Bienvenido a esta aventura interactiva! Aquí puedes crear tu propia historia mágica.  
-        Puedes escoger entre las opciones o introducir tu propia idea. ¡Deja que tu imaginación fluya!
-        """
+        intro_text = (
+            "¡Bienvenido a esta aventura interactiva! Aquí puedes crear tu propia historia mágica. "
+            "Puedes escoger entre las opciones o introducir tu propia idea. ¡Deja que tu imaginación fluya!"
+        )
+
         followup_text = "¡Nosotros crearemos una historia solo para ti!"
         button_label = "¡Empezar!"
     else:
-        intro_text = """
-        Welcome to this interactive adventure! Here, you can create your very own magical story.  
-        You can choose from the options or write your own. Let your imagination run wild!
-        """
+        intro_text = (
+           "Welcome to this interactive adventure! Here, you can create your very own magical story. "
+            "You can choose from the options or write your own. Let your imagination run wild!"
+        )
         followup_text = "We'll turn it into a story just for you!"
         button_label = "Start!"
 
@@ -281,7 +288,7 @@ if st.session_state.page == -2:
 
 # PAGE -1 — Choose Age Group
 elif st.session_state.page == -1:
-    question = "👶 How old are you?" if st.session_state.language == "en" else "¿Cuántos años tienes?"
+    question = "👶 How old are you?" if st.session_state.language == "en" else "👶¿Cuántos años tienes?"
     st.markdown(f"<div class='big-title'> {question}</div>", unsafe_allow_html=True)
 
     age_options = ["0-3", "3-10", "10-16"]
@@ -326,6 +333,15 @@ if st.session_state.page == 0:
                     st.session_state.story_tone = tone_en
                     st.session_state.page = 1
                     st.rerun()
+    
+    # Build spoken list of tone options
+    instruction_text = "Choose the Tone of Your Story" if lang == "en" else "Elige el tono de tu historia"
+    tone_labels = [tone_es if lang == "es" else tone_en for tone_en, tone_es in tones]
+    combined_text = instruction_text + ". " + ", ".join(tone_labels)
+    add_speaker_button(combined_text)
+
+
+
 
 
 
@@ -336,8 +352,8 @@ if st.session_state.page == 1:
 
 
     characters = [
-        ("A boy named Peter", "Un niño llamado Pedro"),
-        ("A girl named Alice", "Una niña llamada Alicia"),
+        ("Peter", "Pedro"),
+        ("Alice", "Alicia"),
         ("Mr. Rabbit", "Señor Conejo"),
         ("A doggy", "Un perrito")
     ]
@@ -415,7 +431,17 @@ elif st.session_state.page == 4:
     options = [(comp["en"], comp["es"]) for comp in st.session_state.random_partners]
 
 
-    option_buttons(options, "comp", "partner")
+    cols = st.columns([1, 1, 1])
+    lang = st.session_state.language
+
+    for i, (value_en, value_es) in enumerate(options):
+        display = value_es if lang == "es" else value_en
+        with cols[i]:
+            if st.button(display, key=f"comp_{i}"):
+                st.session_state["partner"] = value_en
+                st.session_state.page += 1
+                st.rerun()
+
 
     # Custom companion input
     custom = st.text_input(t("Or describe the companion:"))
